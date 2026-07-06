@@ -93,15 +93,8 @@ import os
 import discord
 from discord.ext import commands
 
-# 1. 設置權限 (Intents 是必要的)
-intents = discord.Intents.default()
-intents.message_content = True 
-
-# 2. 初始化機器人
-bot = commands.Bot(command_prefix='!', intents=intents)
-
-# ... (把你原本寫好的 TicketView 等程式碼放在這裡) ...
-
-# 3. 確保最後執行啟動
+# 確保程式碼這裡這樣寫
 TOKEN = os.getenv('DISCORD_TOKEN')
+
+# 確保最後有這行且沒有被註解掉
 bot.run(TOKEN)
