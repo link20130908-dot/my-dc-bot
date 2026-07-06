@@ -19,22 +19,25 @@ class CloseTicketView(discord.ui.View):
     async def close_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         role = discord.utils.get(interaction.guild.roles, name="老闆")
         if role not in interaction.user.roles and not interaction.user.guild_permissions.administrator:
-            await interaction.response.send_message("❌ 錯誤：只有「老闆」有權限關閉！", ephemeral=True)
+            await interaction.response.send_message("❌ 只有「老闆」有權限關閉！", ephemeral=True)
             return
 
         await interaction.response.send_message("🚧 5 秒後刪除頻道...", ephemeral=False)
         await asyncio.sleep(5)
         await interaction.channel.delete()
 
-# --- 2. 彈窗邏輯 ---
+# --- 2. 彈窗邏輯 (已優化為 defer 模式) ---
 class TicketModal(discord.ui.Modal, title="📋 下單登記表"):
-    item = discord.ui.TextInput(label="1. 欲購買項目", placeholder="例：尋寶隊 全包單", required=True)
+    item = discord.ui.TextInput(label="1. 欲購買項目", placeholder="例：尋寶隊", required=True)
     amount = discord.ui.TextInput(label="2. 購買數量", placeholder="例：5", required=True)
     currency = discord.ui.TextInput(label="3. 支付幣別", placeholder="例：許願幣", required=True)
-    game_id = discord.ui.TextInput(label="4. 您的遊戲 ID", placeholder="例：1114514", required=True)
+    game_id = discord.ui.TextInput(label="4. 遊戲 ID", placeholder="例：1114514", required=True)
     player = discord.ui.TextInput(label="5. 陪玩人員", placeholder="例：小明", required=True)
 
     async def on_submit(self, interaction: discord.Interaction):
+        # 立即延遲回應，避免超時
+        await interaction.response.defer(ephemeral=True)
+        
         guild = interaction.guild
         admin_role = discord.utils.get(guild.roles, name="老闆")
         
@@ -46,6 +49,7 @@ class TicketModal(discord.ui.Modal, title="📋 下單登記表"):
         if admin_role:
             overwrites[admin_role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
 
+        # 建立頻道
         channel = await guild.create_text_channel(name=f"ticket-{interaction.user.id}", overwrites=overwrites)
         
         embed = discord.Embed(title="📥 收到新訂單預約！", color=discord.Color.green())
@@ -56,7 +60,9 @@ class TicketModal(discord.ui.Modal, title="📋 下單登記表"):
         embed.add_field(name="陪玩", value=self.player.value, inline=False)
         
         await channel.send(f"{admin_role.mention if admin_role else ''} {interaction.user.mention} 您好！", embed=embed, view=CloseTicketView())
-        await interaction.response.send_message(f"✅ 已建立頻道：{channel.mention}", ephemeral=True)
+        
+        # 使用 followup 發送完成通知
+        await interaction.followup.send(f"✅ 已建立專屬頻道：{channel.mention}", ephemeral=True)
 
 # --- 3. 開單面板 ---
 class TicketView(discord.ui.View):
@@ -79,7 +85,7 @@ async def ticket(ctx):
     embed = discord.Embed(title="⚡ X家電競 - 遊戲陪玩服務 ⚡", description="點擊下方按鈕開始諮詢。", color=discord.Color.blue())
     await ctx.send(embed=embed, view=TicketView())
 
-# --- 4. Web 服務 (保持運行) ---
+# --- 4. Web 服務 ---
 app = Flask('')
 @app.route('/')
 def home(): return "Online"
