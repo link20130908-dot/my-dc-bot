@@ -102,4 +102,4 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 # 2. 最後啟動 (只需執行一次)
 TOKEN = os.getenv('DISCORD_TOKEN')
-bot.run(TOKEN)
+bot.run(MTUyMzU4NzU2NzEzODYzOTkyMw.GkByjQ.9nUY_uTiMJjls_8fDTpvB-wEx7VGtwDv7pnamw)
