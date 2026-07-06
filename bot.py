@@ -18,7 +18,7 @@ class ReviewModal(discord.ui.Modal, title='服務評價'):
     comment = discord.ui.TextInput(label='心得分享', style=discord.TextStyle.paragraph, placeholder='您的建議對我們很重要！')
 
     async def on_submit(self, interaction: discord.Interaction):
-        REVIEW_CHANNEL_ID = 1523692423790727219 # 請確保正確
+        REVIEW_CHANNEL_ID = 1523703386992676864 # 請確保正確
         channel = interaction.guild.get_channel(REVIEW_CHANNEL_ID)
         embed = discord.Embed(title="✨ 新評價到來！", color=discord.Color.gold())
         embed.add_field(name="客戶", value=interaction.user.mention, inline=False)
@@ -41,7 +41,7 @@ class CloseTicketView(discord.ui.View):
     @discord.ui.button(label="🔒 關閉客服單", style=discord.ButtonStyle.danger, custom_id="unique_close_btn")
     async def close_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         # 自動存檔邏輯
-        LOG_CHANNEL_ID = 1523692423790727219 # 存檔頻道 ID
+        LOG_CHANNEL_ID = 1523703386992676864 # 存檔頻道 ID
         log_channel = interaction.guild.get_channel(LOG_CHANNEL_ID)
         transcript = await chat_exporter.chat_export(interaction.channel)
         if transcript:
