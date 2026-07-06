@@ -16,7 +16,7 @@ class ReviewModal(discord.ui.Modal, title='服務評價'):
     comment = discord.ui.TextInput(label='心得分享', style=discord.TextStyle.paragraph, placeholder='您的建議對我們很重要！')
 
     async def on_submit(self, interaction: discord.Interaction):
-        REVIEW_CHANNEL_ID = 123456789012345678 # 請修改評價頻道 ID
+        REVIEW_CHANNEL_ID = 1523692423790727219 # 請修改評價頻道 ID
         channel = interaction.guild.get_channel(REVIEW_CHANNEL_ID)
         embed = discord.Embed(title="✨ 新評價到來！", color=discord.Color.gold())
         embed.add_field(name="客戶", value=interaction.user.mention, inline=False)
