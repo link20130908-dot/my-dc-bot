@@ -3,13 +3,8 @@ from discord import app_commands
 from discord.ext import commands
 import asyncio
 import os
-import io # 新增
-import chat_exporter # 新增
 from flask import Flask
 from threading import Thread
-
-# 存檔頻道 ID (統一設定)
-LOG_CHANNEL_ID = 1523703386992676864
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -38,19 +33,12 @@ class ReviewButtonView(discord.ui.View):
     async def review_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(ReviewModal())
 
-# --- 2. 關單邏輯 (已整合自動存檔) ---
+# --- 2. 關單邏輯 ---
 class CloseTicketView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None)
     @discord.ui.button(label="🔒 關閉客服單", style=discord.ButtonStyle.danger, custom_id="unique_close_btn")
     async def close_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # 存檔邏輯
-        transcript = await chat_exporter.chat_export(interaction.channel)
-        if transcript:
-            log_channel = interaction.guild.get_channel(LOG_CHANNEL_ID)
-            file = discord.File(io.BytesIO(transcript.encode()), filename=f"紀錄-{interaction.channel.name}.html")
-            if log_channel: await log_channel.send(f"📋 **訂單自動存檔：{interaction.channel.name}**", file=file)
-        
-        await interaction.response.send_message("🚧 紀錄已備份，5 秒後刪除頻道...", ephemeral=False)
+        await interaction.response.send_message("🚧 5 秒後刪除頻道...", ephemeral=False)
         await asyncio.sleep(5)
         await interaction.channel.delete()
 
@@ -95,7 +83,7 @@ async def on_ready():
     bot.add_view(DirectTicketView())
     bot.add_view(CloseTicketView())
     bot.add_view(ReviewButtonView())
-    print("【系統提示】機器人已啟動，自動與手動存檔功能就緒！")
+    print("【系統提示】機器人已啟動，簡潔模式運作中！")
 
 @bot.tree.command(name="ticket", description="發送下單面板")
 async def ticket(interaction: discord.Interaction):
@@ -110,17 +98,6 @@ async def support(interaction: discord.Interaction):
 @bot.tree.command(name="finish", description="發送評價按鈕")
 async def finish(interaction: discord.Interaction):
     await interaction.response.send_message("請顧客點擊下方按鈕進行服務評價：", view=ReviewButtonView())
-
-# --- 新增：手動存檔指令 ---
-@bot.tree.command(name="save", description="手動將頻道對話紀錄備份")
-async def save(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
-    transcript = await chat_exporter.chat_export(interaction.channel)
-    if transcript:
-        log_channel = interaction.guild.get_channel(LOG_CHANNEL_ID)
-        file = discord.File(io.BytesIO(transcript.encode()), filename=f"備份-{interaction.channel.name}.html")
-        if log_channel: await log_channel.send(f"📋 **手動備份：{interaction.channel.name}**", file=file)
-        await interaction.followup.send("✅ 已手動存檔至備份頻道！", ephemeral=True)
 
 app = Flask('')
 @app.route('/')
