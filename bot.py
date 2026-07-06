@@ -10,15 +10,15 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# --- 評價系統 ---
+# --- 1. 評價系統 (顯示給顧客) ---
 class ReviewModal(discord.ui.Modal, title='服務評價'):
     score = discord.ui.TextInput(label='請評分 (1-5星)', placeholder='請輸入數字 1-5', min_length=1, max_length=1)
     comment = discord.ui.TextInput(label='心得分享', style=discord.TextStyle.paragraph, placeholder='您的建議對我們很重要！')
 
     async def on_submit(self, interaction: discord.Interaction):
-        # 【重要】請換成你的評價頻道 ID
+        # 【重要】請務必將下方的 ID 換成你伺服器「評價頻道」的實際 ID
         REVIEW_CHANNEL_ID = 123456789012345678 
-        channel = interaction.guild.get_channel(REVIEW_CHANNEL_ID)
+        channel = interaction.guild.get_channel(1523692423790727219)
         
         embed = discord.Embed(title="✨ 新評價到來！", color=discord.Color.gold())
         embed.add_field(name="客戶", value=interaction.user.mention, inline=False)
@@ -26,41 +26,32 @@ class ReviewModal(discord.ui.Modal, title='服務評價'):
         embed.add_field(name="心得", value=self.comment.value, inline=False)
         
         if channel: await channel.send(embed=embed)
-        await interaction.response.send_message("感謝您的評價！頻道將在 5 秒後自動刪除。", ephemeral=True)
+        
+        await interaction.response.send_message("感謝您的好評！頻道將在 5 秒後自動關閉。", ephemeral=True)
         await asyncio.sleep(5)
         await interaction.channel.delete()
 
-# --- 1. 關單邏輯 (按鈕直接變評價入口) ---
+# --- 2. 評價按鈕觸發器 ---
+class ReviewButtonView(discord.ui.View):
+    def __init__(self): super().__init__(timeout=None)
+    @discord.ui.button(label="⭐ 點此留下評價", style=discord.ButtonStyle.success)
+    async def review_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(ReviewModal())
+
+# --- 3. 關單邏輯 ---
 class CloseTicketView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None)
-
     @discord.ui.button(label="🔒 關閉客服單", style=discord.ButtonStyle.danger, custom_id="close_ticket_button")
     async def close_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         role = discord.utils.get(interaction.guild.roles, name="老闆")
         if role not in interaction.user.roles and not interaction.user.guild_permissions.administrator:
             await interaction.response.send_message("❌ 只有「老闆」有權限關閉！", ephemeral=True)
             return
-        # 點擊按鈕直接觸發評價視窗
-        await interaction.response.send_modal(ReviewModal())
+        await interaction.response.send_message("🚧 5 秒後刪除頻道...", ephemeral=False)
+        await asyncio.sleep(5)
+        await interaction.channel.delete()
 
-# --- 2. 直接開單邏輯 ---
-class DirectTicketView(discord.ui.View):
-    def __init__(self): super().__init__(timeout=None)
-    @discord.ui.button(label="🛠️ 聯絡官方客服", style=discord.ButtonStyle.primary, custom_id="direct_ticket_button")
-    async def direct_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer(ephemeral=True)
-        guild = interaction.guild
-        admin_role = discord.utils.get(guild.roles, name="老闆")
-        overwrites = {guild.default_role: discord.PermissionOverwrite(read_messages=False), 
-                      interaction.user: discord.PermissionOverwrite(read_messages=True, send_messages=True),
-                      guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True)}
-        if admin_role: overwrites[admin_role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
-        channel = await guild.create_text_channel(name=f"客服-{interaction.user.name}", overwrites=overwrites)
-        embed = discord.Embed(title="💬 官方客服已專屬為您服務", description="請說明您的問題。處理完畢後，點擊下方關閉按鈕即可評價。", color=discord.Color.orange())
-        await channel.send(f"{admin_role.mention if admin_role else ''} {interaction.user.mention}", embed=embed, view=CloseTicketView())
-        await interaction.followup.send(f"✅ 已建立頻道：{channel.mention}", ephemeral=True)
-
-# --- 3. 原有的彈窗開單邏輯 ---
+# --- 4. 開單邏輯 ---
 class TicketModal(discord.ui.Modal):
     def __init__(self): super().__init__(title="📋 下單登記表", custom_id="ticket_modal_submit")
     item = discord.ui.TextInput(label="1. 欲購買項目", placeholder="例如：尋寶隊", required=True)
@@ -93,13 +84,34 @@ class TicketView(discord.ui.View):
     async def ticket_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(TicketModal())
 
-# --- 4. 系統初始化與指令 ---
+class DirectTicketView(discord.ui.View):
+    def __init__(self): super().__init__(timeout=None)
+    @discord.ui.button(label="🛠️ 聯絡官方客服", style=discord.ButtonStyle.primary, custom_id="direct_ticket_button")
+    async def direct_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(ephemeral=True)
+        guild = interaction.guild
+        admin_role = discord.utils.get(guild.roles, name="老闆")
+        overwrites = {guild.default_role: discord.PermissionOverwrite(read_messages=False), 
+                      interaction.user: discord.PermissionOverwrite(read_messages=True, send_messages=True),
+                      guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True)}
+        if admin_role: overwrites[admin_role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
+        channel = await guild.create_text_channel(name=f"客服-{interaction.user.name}", overwrites=overwrites)
+        embed = discord.Embed(title="💬 官方客服已專屬為您服務", description="請說明您的問題。處理完畢後，點擊「關閉客服單」。", color=discord.Color.orange())
+        await channel.send(f"{admin_role.mention if admin_role else ''} {interaction.user.mention}", embed=embed, view=CloseTicketView())
+        await interaction.followup.send(f"✅ 已建立頻道：{channel.mention}", ephemeral=True)
+
+# --- 5. 系統與指令 ---
 @bot.event
 async def on_ready():
     bot.add_view(TicketView())
     bot.add_view(DirectTicketView())
     bot.add_view(CloseTicketView())
     print("【系統提示】機器人已啟動！")
+
+@bot.command()
+@commands.has_role("老闆")
+async def finish(ctx):
+    await ctx.send("感謝您的惠顧！請顧客點擊下方按鈕進行服務評價，評價完成後頻道將自動關閉：", view=ReviewButtonView())
 
 @bot.command()
 @commands.has_role("老闆")
