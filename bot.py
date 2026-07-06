@@ -6,44 +6,43 @@ import os
 from flask import Flask
 from threading import Thread
 
-# 設置 Intent
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# --- 1. 評價視窗 (Modal) ---
+# --- 1. 評價視窗 ---
 class ReviewModal(discord.ui.Modal, title='服務評價'):
     score = discord.ui.TextInput(label='請評分 (1-5星)', placeholder='請輸入 1-5', min_length=1, max_length=1)
     comment = discord.ui.TextInput(label='心得分享', style=discord.TextStyle.paragraph, placeholder='您的建議對我們很重要！')
 
     async def on_submit(self, interaction: discord.Interaction):
-        REVIEW_CHANNEL_ID = 123456789012345678 # 請修改 ID
+        REVIEW_CHANNEL_ID = 123456789012345678 # 請修改評價頻道 ID
         channel = interaction.guild.get_channel(REVIEW_CHANNEL_ID)
         embed = discord.Embed(title="✨ 新評價到來！", color=discord.Color.gold())
         embed.add_field(name="客戶", value=interaction.user.mention, inline=False)
         embed.add_field(name="評分", value="⭐" * int(self.score.value), inline=False)
         embed.add_field(name="心得", value=self.comment.value, inline=False)
         if channel: await channel.send(embed=embed)
-        await interaction.response.send_message("感謝您的好評！頻道將在 5 秒後自動關閉。", ephemeral=True)
+        await interaction.response.send_message("感謝好評！頻道將在 5 秒後刪除。", ephemeral=True)
         await asyncio.sleep(5)
         await interaction.channel.delete()
 
 class ReviewButtonView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None)
-    @discord.ui.button(label="⭐ 點此留下評價", style=discord.ButtonStyle.success, custom_id="review_btn_perm")
+    @discord.ui.button(label="⭐ 點此留下評價", style=discord.ButtonStyle.success, custom_id="unique_review_btn")
     async def review_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(ReviewModal())
 
-# --- 2. 關單按鈕 ---
+# --- 2. 關單邏輯 ---
 class CloseTicketView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None)
-    @discord.ui.button(label="🔒 關閉客服單", style=discord.ButtonStyle.danger, custom_id="close_btn_perm")
+    @discord.ui.button(label="🔒 關閉客服單", style=discord.ButtonStyle.danger, custom_id="unique_close_btn")
     async def close_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message("🚧 5 秒後刪除頻道...", ephemeral=False)
         await asyncio.sleep(5)
         await interaction.channel.delete()
 
-# --- 3. 開單面板與 Modal ---
+# --- 3. 開單面板與邏輯 ---
 class TicketModal(discord.ui.Modal, title="📋 下單登記表"):
     item = discord.ui.TextInput(label="1. 欲購買項目", placeholder="例如：尋寶隊")
     amount = discord.ui.TextInput(label="2. 購買數量", placeholder="例如：5")
@@ -62,17 +61,17 @@ class TicketModal(discord.ui.Modal, title="📋 下單登記表"):
 
 class TicketView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None)
-    @discord.ui.button(label="✉️ 點此開單洽詢", style=discord.ButtonStyle.primary, custom_id="ticket_btn_perm")
+    @discord.ui.button(label="✉️ 點此開單洽詢", style=discord.ButtonStyle.primary, custom_id="unique_ticket_btn")
     async def ticket_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(TicketModal())
 
 class DirectTicketView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None)
-    @discord.ui.button(label="🛠️ 聯絡官方客服", style=discord.ButtonStyle.primary, custom_id="support_btn_perm")
+    @discord.ui.button(label="🛠️ 聯絡官方客服", style=discord.ButtonStyle.primary, custom_id="unique_support_btn")
     async def direct_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer(ephemeral=True)
         channel = await interaction.guild.create_text_channel(name=f"客服-{interaction.user.name}")
-        embed = discord.Embed(title="💬 官方客服已專屬為您服務", description="請說明您的問題。處理完畢後，點擊關閉按鈕。", color=discord.Color.orange())
+        embed = discord.Embed(title="💬 官方客服已專屬為您服務", description="請說明問題，完畢後點擊關閉。", color=discord.Color.orange())
         await channel.send(f"{interaction.user.mention} 您好！", embed=embed, view=CloseTicketView())
         await interaction.followup.send(f"✅ 已建立專屬頻道：{channel.mention}", ephemeral=True)
 
@@ -84,11 +83,11 @@ async def on_ready():
     bot.add_view(DirectTicketView())
     bot.add_view(CloseTicketView())
     bot.add_view(ReviewButtonView())
-    print("【系統提示】機器人已啟動，指令已同步！")
+    print("【系統提示】機器人已啟動，所有 ID 已隔離！")
 
 @bot.tree.command(name="ticket", description="發送下單面板")
 async def ticket(interaction: discord.Interaction):
-    embed = discord.Embed(title="⚡ X家電競 - 遊戲陪玩服務 ⚡", description="點擊下方按鈕開始諮詢（需填寫表單）。", color=discord.Color.blue())
+    embed = discord.Embed(title="⚡ X家電競 - 遊戲陪玩服務 ⚡", description="點擊下方按鈕開始諮詢。", color=discord.Color.blue())
     await interaction.response.send_message(embed=embed, view=TicketView())
 
 @bot.tree.command(name="support", description="發送客服面板")
