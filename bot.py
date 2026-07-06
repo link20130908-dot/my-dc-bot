@@ -89,17 +89,19 @@ async def ticket(ctx):
 async def ticket_error(ctx, error):
     if isinstance(error, commands.MissingRole):
         await ctx.send("❌ 權限不足！只有「老闆」才能使用此指令。", ephemeral=True)
+import os
 import discord
 from discord.ext import commands
-import os
 
-# 1. 定義機器人
+# 1. 設置權限 (Intents 是必要的)
 intents = discord.Intents.default()
 intents.message_content = True 
+
+# 2. 初始化機器人
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# ... (中間所有的類別定義與事件監聽器，例如 TicketView 等) ...
+# ... (把你原本寫好的 TicketView 等程式碼放在這裡) ...
 
-# 2. 最後啟動 (只需執行一次)
+# 3. 確保最後執行啟動
 TOKEN = os.getenv('DISCORD_TOKEN')
-bot.run(MTUyMzU4NzU2NzEzODYzOTkyMw.GkByjQ.9nUY_uTiMJjls_8fDTpvB-wEx7VGtwDv7pnamw)
+bot.run(TOKEN)
