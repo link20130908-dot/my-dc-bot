@@ -92,15 +92,38 @@ async def ticket_error(ctx, error):
 import os
 import discord
 from discord.ext import commands
+from flask import Flask
+from threading import Thread
+
+# === 新增：建立一個簡單的 Flask 網頁伺服器，用來應付 Render 的 Port 檢查 ===
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is running!"
+
+def run():
+    # 讀取 Render 自動分配的 PORT，如果沒有就預設使用 10000
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+# =========================================================
 
 # 1. 初始化
 intents = discord.Intents.default()
-intents.message_content = True 
+intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# 2. 定義你的 View 與其他邏輯
-# ... (這裡放你的 TicketView 等類別) ...
+# 2. 定義你的 View 與其他服務
+# # ... (請確保你的 TicketView 程式碼在上方有正確定義) ...
 
-# 3. 最末端啟動
+# 3. 啟動加載與網頁
+# 在機器人啟動前，先在背景把網頁伺服器跑起來
+keep_alive()
+
+# 4. 登入並啟動機器人
 TOKEN = os.getenv('DISCORD_TOKEN')
 bot.run(TOKEN)
