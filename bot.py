@@ -99,30 +99,6 @@ async def support(interaction: discord.Interaction):
 async def finish(interaction: discord.Interaction):
     await interaction.response.send_message("請顧客點擊下方按鈕進行服務評價：", view=ReviewButtonView())
 
-async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
-        
-        # --- VIP 檢查邏輯 ---
-        VIP_ROLE_ID = 123456789012345678 # 請填入你的 VIP 身分組 ID
-        is_vip = any(role.id == VIP_ROLE_ID for role in interaction.user.roles)
-        vip_tag = "❗" if is_vip else ""
-        
-        # 將標記加入頻道名稱
-        channel_name = f"{vip_tag}ticket-{interaction.user.name}"
-        channel = await interaction.guild.create_text_channel(name=channel_name)
-        
-        # Embed 標題也加上 VIP 標記
-        embed = discord.Embed(
-            title=f"{vip_tag} 新訂單預約 {'(VIP 客戶)' if is_vip else ''}", 
-            color=discord.Color.gold() if is_vip else discord.Color.green()
-        )
-        
-        embed.add_field(name="項目", value=self.item.value, inline=False)
-        embed.add_field(name="資訊", value=f"數量:{self.amount.value}, 幣別:{self.currency.value}\nID:{self.game_id.value}\n人員:{self.player.value}", inline=False)
-        
-        await channel.send(f"{interaction.user.mention} 您好！{'歡迎尊貴的 VIP 客戶。' if is_vip else ''}", embed=embed, view=CloseTicketView())
-        await interaction.followup.send(f"✅ 已建立頻道：{channel.mention}", ephemeral=True)
-
 app = Flask('')
 @app.route('/')
 def home(): return "Online"
