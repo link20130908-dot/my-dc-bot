@@ -16,7 +16,7 @@ class ReviewModal(discord.ui.Modal, title='服務評價'):
     comment = discord.ui.TextInput(label='心得分享', style=discord.TextStyle.paragraph, placeholder='您的建議對我們很重要！')
 
     async def on_submit(self, interaction: discord.Interaction):
-        # 【重要】請將下方 ID 換成你伺服器「評價頻道」的 ID
+        # 【重要】請換成你的評價頻道 ID
         REVIEW_CHANNEL_ID = 123456789012345678 
         channel = interaction.guild.get_channel(REVIEW_CHANNEL_ID)
         
@@ -26,11 +26,11 @@ class ReviewModal(discord.ui.Modal, title='服務評價'):
         embed.add_field(name="心得", value=self.comment.value, inline=False)
         
         if channel: await channel.send(embed=embed)
-        await interaction.response.send_message("感謝您的好評！頻道將在 5 秒後自動關閉。", ephemeral=True)
+        await interaction.response.send_message("感謝您的評價！頻道將在 5 秒後自動刪除。", ephemeral=True)
         await asyncio.sleep(5)
         await interaction.channel.delete()
 
-# --- 1. 關單邏輯 (已整合評價) ---
+# --- 1. 關單邏輯 (按鈕直接變評價入口) ---
 class CloseTicketView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None)
 
@@ -40,7 +40,7 @@ class CloseTicketView(discord.ui.View):
         if role not in interaction.user.roles and not interaction.user.guild_permissions.administrator:
             await interaction.response.send_message("❌ 只有「老闆」有權限關閉！", ephemeral=True)
             return
-        # 點擊關單後，先彈出評價視窗
+        # 點擊按鈕直接觸發評價視窗
         await interaction.response.send_modal(ReviewModal())
 
 # --- 2. 直接開單邏輯 ---
@@ -56,11 +56,11 @@ class DirectTicketView(discord.ui.View):
                       guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True)}
         if admin_role: overwrites[admin_role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
         channel = await guild.create_text_channel(name=f"客服-{interaction.user.name}", overwrites=overwrites)
-        embed = discord.Embed(title="💬 官方客服已專屬為您服務", description="請說明您的問題。處理完畢後，請點擊下方按鈕。", color=discord.Color.orange())
+        embed = discord.Embed(title="💬 官方客服已專屬為您服務", description="請說明您的問題。處理完畢後，點擊下方關閉按鈕即可評價。", color=discord.Color.orange())
         await channel.send(f"{admin_role.mention if admin_role else ''} {interaction.user.mention}", embed=embed, view=CloseTicketView())
         await interaction.followup.send(f"✅ 已建立頻道：{channel.mention}", ephemeral=True)
 
-# --- 3. 彈窗開單邏輯 ---
+# --- 3. 原有的彈窗開單邏輯 ---
 class TicketModal(discord.ui.Modal):
     def __init__(self): super().__init__(title="📋 下單登記表", custom_id="ticket_modal_submit")
     item = discord.ui.TextInput(label="1. 欲購買項目", placeholder="例如：尋寶隊", required=True)
@@ -104,16 +104,13 @@ async def on_ready():
 @bot.command()
 @commands.has_role("老闆")
 async def ticket(ctx):
-    embed = discord.Embed(title="⚡ X家電競 - 遊戲陪玩服務 ⚡", description="點擊下方按鈕開始諮詢（需填寫表單）。", color=discord.Color.blue())
-    await ctx.send(embed=embed, view=TicketView())
+    await ctx.send(embed=discord.Embed(title="⚡ X家電競 - 遊戲陪玩服務 ⚡", description="點擊下方按鈕開始諮詢（需填寫表單）。", color=discord.Color.blue()), view=TicketView())
 
 @bot.command()
 @commands.has_role("老闆")
 async def support(ctx):
-    embed = discord.Embed(title=" 🛠️ 聯絡官方客服面板 🛠️", description="若有問題，請點擊下方按鈕直接建立專屬客服單。", color=discord.Color.orange())
-    await ctx.send(embed=embed, view=DirectTicketView())
+    await ctx.send(embed=discord.Embed(title=" 🛠️ 聯絡官方客服面板 🛠️", description="若有問題，請點擊下方按鈕。", color=discord.Color.orange()), view=DirectTicketView())
 
-# --- 5. Web 服務 ---
 app = Flask('')
 @app.route('/')
 def home(): return "Online"
