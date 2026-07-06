@@ -93,8 +93,14 @@ import os
 import discord
 from discord.ext import commands
 
-# 確保程式碼這裡這樣寫
-TOKEN = os.getenv('DISCORD_TOKEN')
+# 1. 初始化
+intents = discord.Intents.default()
+intents.message_content = True 
+bot = commands.Bot(command_prefix='!', intents=intents)
 
-# 確保最後有這行且沒有被註解掉
+# 2. 定義你的 View 與其他邏輯
+# ... (這裡放你的 TicketView 等類別) ...
+
+# 3. 最末端啟動
+TOKEN = os.getenv('DISCORD_TOKEN')
 bot.run(TOKEN)
