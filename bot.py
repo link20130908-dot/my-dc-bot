@@ -8,6 +8,7 @@ from threading import Thread
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True  # 建議開啟，確保成員資料讀取正常
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # --- 1. 評價視窗 ---
@@ -52,7 +53,19 @@ class TicketModal(discord.ui.Modal, title="📋 下單登記表"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
-        channel = await interaction.guild.create_text_channel(name=f"ticket-{interaction.user.name}")
+        
+        # 【新增：設定權限覆蓋】
+        staff_role = interaction.guild.get_role(1522856818626400388)
+        overwrites = {
+            interaction.guild.default_role: discord.PermissionOverwrite(view_channel=False), # 所有人看不到
+            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True) # 開單人可看、可傳訊息
+        }
+        if staff_role:
+            overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True) # 員工可看、可傳訊息
+
+        # 建立頻道並直接套用權限
+        channel = await interaction.guild.create_text_channel(name=f"ticket-{interaction.user.name}", overwrites=overwrites)
+        
         embed = discord.Embed(title="📥 收到新訂單預約！", color=discord.Color.green())
         embed.add_field(name="項目", value=self.item.value, inline=False)
         embed.add_field(name="資訊", value=f"數量:{self.amount.value}, 幣別:{self.currency.value}\nID:{self.game_id.value}\n人員:{self.player.value}", inline=False)
@@ -70,7 +83,19 @@ class DirectTicketView(discord.ui.View):
     @discord.ui.button(label="🛠️ 聯絡官方客服", style=discord.ButtonStyle.primary, custom_id="unique_support_btn")
     async def direct_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer(ephemeral=True)
-        channel = await interaction.guild.create_text_channel(name=f"客服-{interaction.user.name}")
+        
+        # 【新增：設定權限覆蓋】
+        staff_role = interaction.guild.get_role(1522856818626400388)
+        overwrites = {
+            interaction.guild.default_role: discord.PermissionOverwrite(view_channel=False), # 所有人看不到
+            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True) # 開單人可看、可傳訊息
+        }
+        if staff_role:
+            overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True) # 員工可看、可傳訊息
+
+        # 建立頻道並直接套用權限
+        channel = await interaction.guild.create_text_channel(name=f"客服-{interaction.user.name}", overwrites=overwrites)
+        
         embed = discord.Embed(title="💬 官方客服已專屬為您服務", description="請說明問題，完畢後點擊關閉。", color=discord.Color.orange())
         await channel.send(f"{interaction.user.mention} 您好！", embed=embed, view=CloseTicketView())
         await interaction.followup.send(f"✅ 已建立專屬頻道：{channel.mention}", ephemeral=True)
